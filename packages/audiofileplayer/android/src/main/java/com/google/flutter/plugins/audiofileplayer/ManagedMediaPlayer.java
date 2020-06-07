@@ -241,7 +241,7 @@ abstract class ManagedMediaPlayer
   public void onCompletion(MediaPlayer mediaPlayer) {
     player = nextPlayer;
     createNextMediaPlayer(this.fileDescription, this.startOffset, this.getLengh);
-    mediaPlayer.reset();
+//    mediaPlayer.reset();
     mediaPlayer.release();
     //createNextMediaPlayera(this.audioBytes);
     //mediaPlayer.release();

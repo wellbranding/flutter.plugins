@@ -65,6 +65,7 @@ class _MyAppState extends State<MyApp> {
     // First card.
     _audio = Audio.load('assets/audio/noise_4_dreams.ogg',
         looping: true,
+        playInBackground: true,
         onComplete: () => setState(() => _audioPlaying = false),
         onDuration: (double durationSeconds) =>
             setState(() => _audioDurationSeconds = durationSeconds),

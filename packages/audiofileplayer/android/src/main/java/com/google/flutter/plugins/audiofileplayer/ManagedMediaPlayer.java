@@ -37,7 +37,7 @@ abstract class ManagedMediaPlayer
   AssetFileDescriptor assetFileDescriptor;
   final Handler handler;
   final Runnable pauseAtEndpointRunnable;
-  double volume;
+  double volume = 0.5;
   private OnSeekCompleteListener onSeekCompleteListener;
   String path;
 
@@ -123,6 +123,10 @@ abstract class ManagedMediaPlayer
 
   /** Releases the underlying MediaPlayer. */
   public void release() {
+    if(nextPlayer!=null){
+      nextPlayer.stop();
+      nextPlayer.release();
+    }
     player.stop();
     player.reset();
     player.release();
@@ -141,9 +145,13 @@ abstract class ManagedMediaPlayer
   public void setVolume(double volume) {
     this.volume = (float) volume;
     player.setVolume((float) volume, (float) volume);
+    if(nextPlayer!=null){
+      nextPlayer.setVolume((float) volume, (float) volume);
+    }
   }
 
-  public void pause() {
+  public void pause()
+  {
     player.pause();
   }
 
@@ -175,7 +183,7 @@ abstract class ManagedMediaPlayer
     nextPlayer = new MediaPlayer();
     try {
       nextPlayer.setDataSource(file, startOffset, lenght);
-      nextPlayer.setVolume((float) 1.0, (float) 1.0);
+      nextPlayer.setVolume((float) volume, (float)volume);
       nextPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
         @Override
         public void onPrepared(MediaPlayer mp) {
@@ -223,7 +231,7 @@ abstract class ManagedMediaPlayer
     nextPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
       @Override
       public void onPrepared(MediaPlayer mp) {
-        nextPlayer.seekTo(0);
+        nextPlayer.seekTo(1);
         player.setNextMediaPlayer(nextPlayer);
         player.setOnErrorListener(ManagedMediaPlayer.this);
         player.setOnCompletionListener(ManagedMediaPlayer.this);
@@ -240,6 +248,7 @@ abstract class ManagedMediaPlayer
   @Override
   public void onCompletion(MediaPlayer mediaPlayer) {
     player = nextPlayer;
+
     createNextMediaPlayer(this.fileDescription, this.startOffset, this.getLengh);
 //    mediaPlayer.reset();
     mediaPlayer.release();

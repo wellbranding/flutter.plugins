@@ -343,7 +343,7 @@ public class AudiofileplayerPlugin
         AssetFileDescriptor fd = assetManager.openFd(key);
         ManagedMediaPlayer newPlayer =
             new LocalManagedMediaPlayer(audioId, fd, this, looping, playInBackground);
-        fd.close();
+        //fd.close();
         mediaPlayers.put(audioId, newPlayer);
         handleDurationForPlayer(newPlayer, audioId);
         result.success(null);

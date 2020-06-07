@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.media.MediaPlayer;
 import android.os.Build;
+import android.util.Log;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -17,6 +19,7 @@ import java.util.UUID;
  * RemoteManagedMediaPlayer.
  */
 class LocalManagedMediaPlayer extends ManagedMediaPlayer {
+
 
   /**
    * Private shared constructor.
@@ -35,6 +38,33 @@ class LocalManagedMediaPlayer extends ManagedMediaPlayer {
     player.setOnSeekCompleteListener(this);
   }
 
+  private LocalManagedMediaPlayer(
+          String audioId,
+          AudiofileplayerPlugin parentAudioPlugin,
+          boolean looping,
+          boolean playInBackground, int aak)
+          throws IllegalArgumentException, IOException {
+    super(audioId, parentAudioPlugin, looping, playInBackground);
+  }
+
+  private LocalManagedMediaPlayer(
+          String audioId,
+          AudiofileplayerPlugin parentAudioPlugin,
+          boolean looping,
+          boolean playInBackground, boolean newa, boolean aah)
+          throws IllegalArgumentException, IOException {
+    super(audioId, parentAudioPlugin, looping, playInBackground);
+  }
+
+  private LocalManagedMediaPlayer(
+          String audioId,
+          AudiofileplayerPlugin parentAudioPlugin,
+          boolean looping,
+          boolean playInBackground, boolean newa)
+          throws IllegalArgumentException, IOException {
+    super(audioId, parentAudioPlugin, looping, playInBackground);
+  }
+
   /**
    * Create a LocalManagedMediaPlayer from an AssetFileDescriptor.
    *
@@ -47,9 +77,14 @@ class LocalManagedMediaPlayer extends ManagedMediaPlayer {
       boolean looping,
       boolean playInBackground)
       throws IOException {
-    this(audioId, parentAudioPlugin, looping, playInBackground);
+    this(audioId, parentAudioPlugin, looping, playInBackground, true);
     player.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
     player.prepare();
+    assetFileDescriptor = afd;
+    this.fileDescription = assetFileDescriptor.getFileDescriptor();
+    this.startOffset = assetFileDescriptor.getStartOffset();
+    this.getLengh  = assetFileDescriptor.getLength();
+    createNextMediaPlayer(this.fileDescription, this.startOffset, this.getLengh);
   }
 
   /**
@@ -64,11 +99,15 @@ class LocalManagedMediaPlayer extends ManagedMediaPlayer {
       boolean looping,
       boolean playInBackground)
       throws IOException {
-    this(audioId, parentAudioPlugin, looping, playInBackground);
+    this(audioId, parentAudioPlugin, looping, playInBackground, true, true);
     player.setDataSource(path);
     player.prepare();
+    this.path = path;
+    createNextMediaPlayer(path);
+    player.setOnErrorListener(this);
+    player.setOnCompletionListener(this);
+    player.setOnSeekCompleteListener(this);
   }
-
   /**
    * Create a ManagedMediaPlayer from a byte array.
    *
@@ -87,9 +126,15 @@ class LocalManagedMediaPlayer extends ManagedMediaPlayer {
       boolean playInBackground,
       Context context)
       throws IOException, IllegalArgumentException, IllegalStateException {
-    this(audioId, parentAudioPlugin, looping, playInBackground);
+    this(audioId, parentAudioPlugin, looping, playInBackground, 2);
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+      this.audioBytes = audioBytes;
       player.setDataSource(new BufferMediaDataSource(audioBytes));
+      player.prepare();
+      createNextMediaPlayera(this.audioBytes);
+      player.setOnErrorListener(this);
+      player.setOnCompletionListener(this);
+      player.setOnSeekCompleteListener(this);
     } else {
       // On older SDK versions, write the byte[] to disk, then read as FileDescriptor.
       File tempAudioFile =
@@ -100,8 +145,9 @@ class LocalManagedMediaPlayer extends ManagedMediaPlayer {
       fos.close();
       FileInputStream fis = new FileInputStream(tempAudioFile);
       player.setDataSource(fis.getFD());
+      //secondPlayer.setDataSource(fis.getFD());
       fis.close();
+      player.prepare();
     }
-    player.prepare();
   }
 }

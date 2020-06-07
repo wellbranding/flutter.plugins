@@ -1,8 +1,15 @@
 package com.google.flutter.plugins.audiofileplayer;
 
+import android.content.res.AssetFileDescriptor;
 import android.media.MediaPlayer;
+import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
+
+import androidx.annotation.RequiresApi;
+
+import java.io.FileDescriptor;
+import java.io.IOException;
 import java.lang.ref.WeakReference;
 
 /** Base class for wrapping a MediaPlayer for use by AudiofileplayerPlugin. */
@@ -12,6 +19,10 @@ abstract class ManagedMediaPlayer
         MediaPlayer.OnSeekCompleteListener {
   private static final String TAG = ManagedMediaPlayer.class.getSimpleName();
   public static final int PLAY_TO_END = -1;
+  protected byte[] audioBytes;
+  protected FileDescriptor fileDescription;
+  protected long startOffset;
+  protected long getLengh;
 
   interface OnSeekCompleteListener {
     /** Called when asynchronous seeking has completed. */
@@ -21,10 +32,14 @@ abstract class ManagedMediaPlayer
   protected final AudiofileplayerPlugin parentAudioPlugin;
   protected final String audioId;
   protected final boolean playInBackground;
-  protected final MediaPlayer player;
+  protected MediaPlayer player;
+  protected MediaPlayer nextPlayer;
+  AssetFileDescriptor assetFileDescriptor;
   final Handler handler;
   final Runnable pauseAtEndpointRunnable;
+  double volume;
   private OnSeekCompleteListener onSeekCompleteListener;
+  String path;
 
   /** Runnable which repeatedly sends the player's position. */
   private final Runnable updatePositionData =
@@ -32,6 +47,9 @@ abstract class ManagedMediaPlayer
         @Override
         public void run() {
           try {
+            if(player==null){
+              return;
+            }
             if (player.isPlaying()) {
               double positionSeconds = (double) player.getCurrentPosition() / 1000.0;
               parentAudioPlugin.handlePosition(audioId, positionSeconds);
@@ -52,7 +70,7 @@ abstract class ManagedMediaPlayer
     this.audioId = audioId;
     this.playInBackground = playInBackground;
     player = new MediaPlayer();
-    player.setLooping(looping);
+    //player.setLooping(looping);
 
     pauseAtEndpointRunnable = new PauseAtEndpointRunnable(this);
 
@@ -60,9 +78,11 @@ abstract class ManagedMediaPlayer
     handler.post(updatePositionData);
   }
 
+
   public void setOnSeekCompleteListener(OnSeekCompleteListener onSeekCompleteListener) {
     this.onSeekCompleteListener = onSeekCompleteListener;
   }
+
 
   public String getAudioId() {
     return audioId;
@@ -119,6 +139,7 @@ abstract class ManagedMediaPlayer
   }
 
   public void setVolume(double volume) {
+    this.volume = (float) volume;
     player.setVolume((float) volume, (float) volume);
   }
 
@@ -126,10 +147,109 @@ abstract class ManagedMediaPlayer
     player.pause();
   }
 
+
+  public void createNextMediaPlayer(AssetFileDescriptor afd) {
+    Log.d("mediaplayer", "trying to create second");
+    nextPlayer = new MediaPlayer();
+    try {
+      nextPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+      nextPlayer.setVolume((float) volume, (float) volume);
+      nextPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+        @Override
+        public void onPrepared(MediaPlayer mp) {
+          nextPlayer.seekTo(0);
+          player.setNextMediaPlayer(nextPlayer);
+          player.setOnErrorListener(ManagedMediaPlayer.this);
+          player.setOnCompletionListener(ManagedMediaPlayer.this);
+          player.setOnSeekCompleteListener(ManagedMediaPlayer.this);
+        }
+      });
+      nextPlayer.prepare();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  public void createNextMediaPlayer(FileDescriptor file, long startOffset, long lenght) {
+    Log.d("mediaplayer", "trying to create second" + volume);
+    nextPlayer = new MediaPlayer();
+    try {
+      nextPlayer.setDataSource(file, startOffset, lenght);
+      nextPlayer.setVolume((float) 1.0, (float) 1.0);
+      nextPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+        @Override
+        public void onPrepared(MediaPlayer mp) {
+          nextPlayer.seekTo(0);
+          player.setNextMediaPlayer(nextPlayer);
+          player.setOnErrorListener(ManagedMediaPlayer.this);
+          player.setOnCompletionListener(ManagedMediaPlayer.this);
+          player.setOnSeekCompleteListener(ManagedMediaPlayer.this);
+        }
+      });
+      nextPlayer.prepare();
+    } catch (IOException e) {
+      Log.d("mediaplayer", "failed to create" + e.toString());
+      e.printStackTrace();
+    }
+  }
+  public void createNextMediaPlayer(String afd) {
+    Log.d("mediaplayer", "trying to create second");
+    nextPlayer = new MediaPlayer();
+    try {
+      nextPlayer.setDataSource(afd);
+      nextPlayer.setVolume((float) volume, (float) volume);
+      nextPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+        @Override
+        public void onPrepared(MediaPlayer mp) {
+          nextPlayer.seekTo(0);
+          player.setNextMediaPlayer(nextPlayer);
+          player.setOnErrorListener(ManagedMediaPlayer.this);
+          player.setOnCompletionListener(ManagedMediaPlayer.this);
+          player.setOnSeekCompleteListener(ManagedMediaPlayer.this);
+        }
+      });
+      nextPlayer.prepare();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  @RequiresApi(api = Build.VERSION_CODES.M)
+  public void createNextMediaPlayera(byte[] afd) throws IOException {
+    Log.d("mediaplayer", "trying to create second");
+    nextPlayer = new MediaPlayer();
+    nextPlayer.setDataSource(new BufferMediaDataSource(afd));
+    nextPlayer.setVolume((float) volume, (float) volume);
+    nextPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+      @Override
+      public void onPrepared(MediaPlayer mp) {
+        nextPlayer.seekTo(0);
+        player.setNextMediaPlayer(nextPlayer);
+        player.setOnErrorListener(ManagedMediaPlayer.this);
+        player.setOnCompletionListener(ManagedMediaPlayer.this);
+        player.setOnSeekCompleteListener(ManagedMediaPlayer.this);
+      }
+    });
+    nextPlayer.prepare();
+  }
+
+
+
+
+  @RequiresApi(api = Build.VERSION_CODES.M)
   @Override
   public void onCompletion(MediaPlayer mediaPlayer) {
-    player.seekTo(0);
-    parentAudioPlugin.handleCompletion(this.audioId);
+    player = nextPlayer;
+    createNextMediaPlayer(this.fileDescription, this.startOffset, this.getLengh);
+    mediaPlayer.reset();
+    mediaPlayer.release();
+    //createNextMediaPlayera(this.audioBytes);
+    //mediaPlayer.release();
+//    player.seekTo(0);
+//    player = secondPlayer;
+//    createSecondMediaPlayer(this.assetFileDescriptor);
+//    //setSecondPlayerToFirst();
+    //parentAudioPlugin.handleCompletion(this.audioId);
   }
 
   /**

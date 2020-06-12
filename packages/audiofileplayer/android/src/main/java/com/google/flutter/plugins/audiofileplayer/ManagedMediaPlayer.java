@@ -19,7 +19,6 @@ abstract class ManagedMediaPlayer
         MediaPlayer.OnSeekCompleteListener {
   private static final String TAG = ManagedMediaPlayer.class.getSimpleName();
   public static final int PLAY_TO_END = -1;
-  protected byte[] audioBytes;
   protected FileDescriptor fileDescription;
   protected long startOffset;
   protected long getLengh;
@@ -70,6 +69,7 @@ abstract class ManagedMediaPlayer
     this.audioId = audioId;
     this.playInBackground = playInBackground;
     player = new MediaPlayer();
+    //not setting looping, because it is custom loop
     //player.setLooping(looping);
 
     pauseAtEndpointRunnable = new PauseAtEndpointRunnable(this);
@@ -156,30 +156,9 @@ abstract class ManagedMediaPlayer
   }
 
 
-  public void createNextMediaPlayer(AssetFileDescriptor afd) {
-    Log.d("mediaplayer", "trying to create second");
-    nextPlayer = new MediaPlayer();
-    try {
-      nextPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
-      nextPlayer.setVolume((float) volume, (float) volume);
-      nextPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-        @Override
-        public void onPrepared(MediaPlayer mp) {
-          nextPlayer.seekTo(0);
-          player.setNextMediaPlayer(nextPlayer);
-          player.setOnErrorListener(ManagedMediaPlayer.this);
-          player.setOnCompletionListener(ManagedMediaPlayer.this);
-          player.setOnSeekCompleteListener(ManagedMediaPlayer.this);
-        }
-      });
-      nextPlayer.prepare();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
 
   public void createNextMediaPlayer(FileDescriptor file, long startOffset, long lenght) {
-    Log.d("mediaplayer", "trying to create second" + volume);
+    Log.d(TAG, "trying to create second" + volume);
     nextPlayer = new MediaPlayer();
     try {
       nextPlayer.setDataSource(file, startOffset, lenght);
@@ -196,49 +175,9 @@ abstract class ManagedMediaPlayer
       });
       nextPlayer.prepare();
     } catch (IOException e) {
-      Log.d("mediaplayer", "failed to create" + e.toString());
+      Log.d(TAG, "failed to create second mediaplayer" + e.toString());
       e.printStackTrace();
     }
-  }
-  public void createNextMediaPlayer(String afd) {
-    Log.d("mediaplayer", "trying to create second");
-    nextPlayer = new MediaPlayer();
-    try {
-      nextPlayer.setDataSource(afd);
-      nextPlayer.setVolume((float) volume, (float) volume);
-      nextPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-        @Override
-        public void onPrepared(MediaPlayer mp) {
-          nextPlayer.seekTo(0);
-          player.setNextMediaPlayer(nextPlayer);
-          player.setOnErrorListener(ManagedMediaPlayer.this);
-          player.setOnCompletionListener(ManagedMediaPlayer.this);
-          player.setOnSeekCompleteListener(ManagedMediaPlayer.this);
-        }
-      });
-      nextPlayer.prepare();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
-  @RequiresApi(api = Build.VERSION_CODES.M)
-  public void createNextMediaPlayera(byte[] afd) throws IOException {
-    Log.d("mediaplayer", "trying to create second");
-    nextPlayer = new MediaPlayer();
-    nextPlayer.setDataSource(new BufferMediaDataSource(afd));
-    nextPlayer.setVolume((float) volume, (float) volume);
-    nextPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-      @Override
-      public void onPrepared(MediaPlayer mp) {
-        nextPlayer.seekTo(1);
-        player.setNextMediaPlayer(nextPlayer);
-        player.setOnErrorListener(ManagedMediaPlayer.this);
-        player.setOnCompletionListener(ManagedMediaPlayer.this);
-        player.setOnSeekCompleteListener(ManagedMediaPlayer.this);
-      }
-    });
-    nextPlayer.prepare();
   }
 
 
@@ -247,18 +186,11 @@ abstract class ManagedMediaPlayer
   @RequiresApi(api = Build.VERSION_CODES.M)
   @Override
   public void onCompletion(MediaPlayer mediaPlayer) {
+    player.seekTo(0);
     player = nextPlayer;
-
     createNextMediaPlayer(this.fileDescription, this.startOffset, this.getLengh);
-//    mediaPlayer.reset();
     mediaPlayer.release();
-    //createNextMediaPlayera(this.audioBytes);
-    //mediaPlayer.release();
-//    player.seekTo(0);
-//    player = secondPlayer;
-//    createSecondMediaPlayer(this.assetFileDescriptor);
-//    //setSecondPlayerToFirst();
-    //parentAudioPlugin.handleCompletion(this.audioId);
+    parentAudioPlugin.handleCompletion(this.audioId);
   }
 
   /**

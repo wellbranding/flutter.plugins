@@ -103,7 +103,6 @@ class LocalManagedMediaPlayer extends ManagedMediaPlayer {
     player.setDataSource(path);
     player.prepare();
     this.path = path;
-    createNextMediaPlayer(path);
     player.setOnErrorListener(this);
     player.setOnCompletionListener(this);
     player.setOnSeekCompleteListener(this);
@@ -128,10 +127,8 @@ class LocalManagedMediaPlayer extends ManagedMediaPlayer {
       throws IOException, IllegalArgumentException, IllegalStateException {
     this(audioId, parentAudioPlugin, looping, playInBackground, 2);
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-      this.audioBytes = audioBytes;
       player.setDataSource(new BufferMediaDataSource(audioBytes));
       player.prepare();
-      createNextMediaPlayera(this.audioBytes);
       player.setOnErrorListener(this);
       player.setOnCompletionListener(this);
       player.setOnSeekCompleteListener(this);

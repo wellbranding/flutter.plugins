@@ -125,7 +125,6 @@ abstract class ManagedMediaPlayer
   public void release() {
     if(nextPlayer!=null){
       nextPlayer.stop();
-      nextPlayer.release();
     }
     player.stop();
     player.reset();
@@ -173,7 +172,7 @@ abstract class ManagedMediaPlayer
           player.setOnSeekCompleteListener(ManagedMediaPlayer.this);
         }
       });
-      nextPlayer.prepare();
+      nextPlayer.prepareAsync();
     } catch (IOException e) {
       Log.d(TAG, "failed to create second mediaplayer" + e.toString());
       e.printStackTrace();

@@ -3,11 +3,11 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:audiofileplayer/audiofileplayer.dart';
 import 'package:audiofileplayer/audio_system.dart';
-import 'package:logging/logging.dart';
+import 'package:audiofileplayer/audiofileplayer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:logging/logging.dart';
 import 'package:path_provider/path_provider.dart';
 
 final Logger _logger = Logger('audiofileplayer_example');
@@ -64,6 +64,8 @@ class _MyAppState extends State<MyApp> {
     AudioSystem.instance.addMediaEventListener(_mediaEventListener);
     // First card.
     _audio = Audio.load('assets/audio/printermanual.m4a',
+        looping: true,
+        playInBackground: true,
         onComplete: () => setState(() => _audioPlaying = false),
         onDuration: (double durationSeconds) =>
             setState(() => _audioDurationSeconds = durationSeconds),

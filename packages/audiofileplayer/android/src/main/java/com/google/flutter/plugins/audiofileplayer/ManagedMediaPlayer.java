@@ -1,8 +1,14 @@
 package com.google.flutter.plugins.audiofileplayer;
 
+import android.content.Context;
 import android.media.MediaPlayer;
 import android.os.Handler;
 import android.util.Log;
+
+import com.google.android.exoplayer2.Player;
+import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.source.MediaSource;
+
 import java.lang.ref.WeakReference;
 
 /** Base class for wrapping a MediaPlayer for use by AudiofileplayerPlugin. */
@@ -21,10 +27,13 @@ abstract class ManagedMediaPlayer
   protected final AudiofileplayerPlugin parentAudioPlugin;
   protected final String audioId;
   protected final boolean playInBackground;
-  protected final MediaPlayer player;
+  protected final Context context;
+  protected final SimpleExoPlayer player;
+  protected final MediaSource mediaSource;
   final Handler handler;
   final Runnable pauseAtEndpointRunnable;
   private OnSeekCompleteListener onSeekCompleteListener;
+
 
   /** Runnable which repeatedly sends the player's position. */
   private final Runnable updatePositionData =
@@ -47,15 +56,27 @@ abstract class ManagedMediaPlayer
       String audioId,
       AudiofileplayerPlugin parentAudioPlugin,
       boolean looping,
-      boolean playInBackground) {
+      boolean playInBackground, Context context,
+      MediaSource mediaSource) {
     this.parentAudioPlugin = parentAudioPlugin;
     this.audioId = audioId;
     this.playInBackground = playInBackground;
-    player = new MediaPlayer();
-    player.setLooping(looping);
+    this.context = context;
+    this.mediaSource = mediaSource;
+    player =  new SimpleExoPlayer.Builder(context).build();
+      if (looping)
+        player.setRepeatMode(Player.REPEAT_MODE_ALL);
+      else
+        player.setRepeatMode(Player.REPEAT_MODE_OFF);
 
     pauseAtEndpointRunnable = new PauseAtEndpointRunnable(this);
 
+    if(this.mediaSource!=null){
+      Log.d(TAG, "mediasource not null");
+    }
+    else{
+      Log.d(TAG, "mediasource is null");
+    }
     handler = new Handler();
     handler.post(updatePositionData);
   }
@@ -84,11 +105,16 @@ abstract class ManagedMediaPlayer
     }
     if (endpointMs == PLAY_TO_END) {
       handler.removeCallbacks(pauseAtEndpointRunnable);
-      player.start();
+      if (player.getPlaybackState() == Player.STATE_ENDED)
+        player.seekTo(0);
+      else if(player.getPlaybackState() == Player.STATE_IDLE)
+        player.prepare(mediaSource);
+      player.setPlayWhenReady(true);
+      //player.start();
     } else {
       // If there is an endpoint, check that it is in the future, then start playback and schedule
       // the pausing after a duration.
-      int positionMs = player.getCurrentPosition();
+      int positionMs = (int) player.getCurrentPosition();
       int durationMs = endpointMs - positionMs;
       Log.i(TAG, "Called play() at " + positionMs + " ms, to play for " + durationMs + " ms.");
       if (durationMs <= 0) {
@@ -96,7 +122,12 @@ abstract class ManagedMediaPlayer
         return;
       }
       handler.removeCallbacks(pauseAtEndpointRunnable);
-      player.start();
+      //player.start();
+      if (player.getPlaybackState() == Player.STATE_ENDED)
+        player.seekTo(0);
+      else if(player.getPlaybackState() == Player.STATE_IDLE)
+        player.prepare(mediaSource);
+      player.setPlayWhenReady(true);
       handler.postDelayed(pauseAtEndpointRunnable, durationMs);
     }
   }
@@ -104,12 +135,12 @@ abstract class ManagedMediaPlayer
   /** Releases the underlying MediaPlayer. */
   public void release() {
     player.stop();
-    player.reset();
+    //player.reset();
     player.release();
-    player.setOnErrorListener(null);
-    player.setOnCompletionListener(null);
-    player.setOnPreparedListener(null);
-    player.setOnSeekCompleteListener(null);
+//    player.setOnErrorListener(null);
+//    player.setOnCompletionListener(null);
+//    player.setOnPreparedListener(null);
+//    player.setOnSeekCompleteListener(null);
     handler.removeCallbacksAndMessages(null);
   }
 
@@ -119,11 +150,11 @@ abstract class ManagedMediaPlayer
   }
 
   public void setVolume(double volume) {
-    player.setVolume((float) volume, (float) volume);
+    player.setVolume((float) volume);
   }
 
   public void pause() {
-    player.pause();
+    player.setPlayWhenReady(false);
   }
 
   @Override
@@ -169,7 +200,7 @@ abstract class ManagedMediaPlayer
         Log.w(TAG, "ManagedMediaPlayer no longer active.");
         return;
       }
-      managedMediaPlayer.player.pause();
+      managedMediaPlayer.player.setPlayWhenReady(false);
       managedMediaPlayer.parentAudioPlugin.handleCompletion(managedMediaPlayer.audioId);
     }
   }

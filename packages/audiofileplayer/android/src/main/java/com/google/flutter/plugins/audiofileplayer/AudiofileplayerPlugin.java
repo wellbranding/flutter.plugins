@@ -11,6 +11,7 @@ import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.AudioManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.support.v4.media.MediaBrowserCompat;
@@ -23,6 +24,11 @@ import android.view.KeyEvent;
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.media.session.MediaButtonReceiver;
+
+import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory;
+import com.google.android.exoplayer2.source.ExtractorMediaSource;
+import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
+
 import io.flutter.embedding.engine.loader.FlutterLoader;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
@@ -130,13 +136,15 @@ public class AudiofileplayerPlugin
 
   private MediaBrowserCompat mediaBrowser;
   private MediaControllerCompat mediaController;
+  FlutterPlugin.FlutterAssets flutterAssets;
 
-  public static void registerWith(Registrar registrar) {
-    AudiofileplayerPlugin instance = new AudiofileplayerPlugin();
-    instance.registrar = registrar;
-    instance.initInstance(registrar.messenger(), registrar.context());
-    instance.registerLifecycleCallbacks(instance.activity());
-  }
+//  public static void registerWith(Registrar registrar) {
+//    Log.d(TAG, "register with");
+//    AudiofileplayerPlugin instance = new AudiofileplayerPlugin();
+//    instance.registrar = registrar;
+//    instance.initInstance(registrar.messenger(), registrar.context());
+//    instance.registerLifecycleCallbacks(instance.activity());
+//  }
 
   private void registerLifecycleCallbacks(Activity activity) {
     LifecycleCallbacks callbacks = new LifecycleCallbacks(this, activity.hashCode());
@@ -172,6 +180,8 @@ public class AudiofileplayerPlugin
 
   @Override
   public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
+    Log.d(TAG, "on attach engine");
+    flutterAssets = binding.getFlutterAssets();
     initInstance(binding.getBinaryMessenger(), binding.getApplicationContext());
   }
 
@@ -217,6 +227,9 @@ public class AudiofileplayerPlugin
   @Override
   public void onMethodCall(MethodCall call, Result result) {
     Log.i(TAG, "onMethodCall: method = " + call.method);
+    Log.i(TAG, "hellloa " + call.method);
+    Log.i(TAG, "hellloazza " + call.method);
+    Log.i(TAG, "helddddlloazza " + call.method);
     if (call.method.equals(LOAD_METHOD)) {
       onLoad(call, result);
       return;
@@ -341,51 +354,66 @@ public class AudiofileplayerPlugin
         AssetManager assetManager = context.getAssets();
         String key = FlutterLoader.getInstance().getLookupKeyForAsset(flutterPath);
         AssetFileDescriptor fd = assetManager.openFd(key);
+        if(flutterAssets!=null)
+        Log.d(TAG, "flutterassets are not null");
+        else{
+          Log.d(TAG, "flutterassets are null");
+        }
+        String assetUrl = flutterAssets.getAssetFilePathByName(flutterPath);
+
+        Log.d(TAG, "assetUrl" + assetUrl);
+        // find file on assets
+        ExtractorMediaSource extractorMediaSource = new ExtractorMediaSource(Uri.parse("file:///android_asset/" + assetUrl),
+                new DefaultDataSourceFactory(context,"ua"),
+                new DefaultExtractorsFactory(), null, null);
+
         ManagedMediaPlayer newPlayer =
-            new LocalManagedMediaPlayer(audioId, fd, this, looping, playInBackground);
+            new LocalManagedMediaPlayer(audioId, fd, this, looping, playInBackground, context, extractorMediaSource);
         fd.close();
         mediaPlayers.put(audioId, newPlayer);
         handleDurationForPlayer(newPlayer, audioId);
         result.success(null);
-      } else if (call.argument(ABSOLUTE_PATH) != null) {
-        String absolutePath = call.argument(ABSOLUTE_PATH);
-        ManagedMediaPlayer newPlayer =
-            new LocalManagedMediaPlayer(audioId, absolutePath, this, looping, playInBackground);
-        mediaPlayers.put(audioId, newPlayer);
-        handleDurationForPlayer(newPlayer, audioId);
-        result.success(null);
-      } else if (call.argument(AUDIO_BYTES) != null) {
-        byte[] audioBytes = call.argument(AUDIO_BYTES);
-        ManagedMediaPlayer newPlayer =
-            new LocalManagedMediaPlayer(
-                audioId, audioBytes, this, looping, playInBackground, context);
-        mediaPlayers.put(audioId, newPlayer);
-        handleDurationForPlayer(newPlayer, audioId);
-        result.success(null);
-      } else if (call.argument(REMOTE_URL) != null) {
-        String remoteUrl = call.argument(REMOTE_URL);
-        // Note that this will throw an exception on invalid URL or lack of network connectivity.
-        RemoteManagedMediaPlayer newPlayer =
-            new RemoteManagedMediaPlayer(audioId, remoteUrl, this, looping, playInBackground);
-        newPlayer.setOnRemoteLoadListener(
-            (success) -> {
-              if (success) {
-                handleDurationForPlayer(newPlayer, audioId);
-                result.success(null);
-              } else {
-                mediaPlayers.remove(audioId);
-                result.error(ERROR_CODE, "Remote URL loading failed for URL: " + remoteUrl, null);
-              }
-            });
-        // Add player to data structure immediately; will be removed if async loading fails.
-        mediaPlayers.put(audioId, newPlayer);
-      } else {
-        result.error(
-            ERROR_CODE,
-            "Could not create ManagedMediaPlayer with no flutterPath, audioBytes, nor remoteUrl.",
-            null);
-        return;
       }
+//      else if (call.argument(ABSOLUTE_PATH) != null) {
+//        String absolutePath = call.argument(ABSOLUTE_PATH);
+//        ManagedMediaPlayer newPlayer =
+//            new LocalManagedMediaPlayer(audioId, absolutePath, this, looping, playInBackground);
+//        mediaPlayers.put(audioId, newPlayer);
+//        handleDurationForPlayer(newPlayer, audioId);
+//        result.success(null);
+//      } else if (call.argument(AUDIO_BYTES) != null) {
+//        byte[] audioBytes = call.argument(AUDIO_BYTES);
+//        ManagedMediaPlayer newPlayer =
+//            new LocalManagedMediaPlayer(
+//                audioId, audioBytes, this, looping, playInBackground, context);
+//        mediaPlayers.put(audioId, newPlayer);
+//        handleDurationForPlayer(newPlayer, audioId);
+//        result.success(null);
+//      }
+//      else if (call.argument(REMOTE_URL) != null) {
+//        String remoteUrl = call.argument(REMOTE_URL);
+//        // Note that this will throw an exception on invalid URL or lack of network connectivity.
+//        RemoteManagedMediaPlayer newPlayer =
+//            new RemoteManagedMediaPlayer(audioId, remoteUrl, this, looping, playInBackground);
+//        newPlayer.setOnRemoteLoadListener(
+//            (success) -> {
+//              if (success) {
+//                handleDurationForPlayer(newPlayer, audioId);
+//                result.success(null);
+//              } else {
+//                mediaPlayers.remove(audioId);
+//                result.error(ERROR_CODE, "Remote URL loading failed for URL: " + remoteUrl, null);
+//              }
+//            });
+//        // Add player to data structure immediately; will be removed if async loading fails.
+//        mediaPlayers.put(audioId, newPlayer);
+//      } else {
+//        result.error(
+//            ERROR_CODE,
+//            "Could not create ManagedMediaPlayer with no flutterPath, audioBytes, nor remoteUrl.",
+//            null);
+//        return;
+//      }
     } catch (Exception e) {
       result.error(ERROR_CODE, "Could not create ManagedMediaPlayer:" + e.getMessage(), null);
     }

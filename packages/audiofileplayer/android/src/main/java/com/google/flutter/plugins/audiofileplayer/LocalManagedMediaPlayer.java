@@ -4,6 +4,9 @@ import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.media.MediaPlayer;
 import android.os.Build;
+
+import com.google.android.exoplayer2.source.MediaSource;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -27,12 +30,13 @@ class LocalManagedMediaPlayer extends ManagedMediaPlayer {
       String audioId,
       AudiofileplayerPlugin parentAudioPlugin,
       boolean looping,
-      boolean playInBackground)
+      boolean playInBackground,
+      Context context, MediaSource mediaSource)
       throws IllegalArgumentException, IOException {
-    super(audioId, parentAudioPlugin, looping, playInBackground);
-    player.setOnErrorListener(this);
-    player.setOnCompletionListener(this);
-    player.setOnSeekCompleteListener(this);
+    super(audioId, parentAudioPlugin, looping, playInBackground, context, mediaSource);
+//    player.setOnErrorListener(this);
+//    player.setOnCompletionListener(this);
+//    player.setOnSeekCompleteListener(this);
   }
 
   /**
@@ -45,11 +49,12 @@ class LocalManagedMediaPlayer extends ManagedMediaPlayer {
       AssetFileDescriptor afd,
       AudiofileplayerPlugin parentAudioPlugin,
       boolean looping,
-      boolean playInBackground)
+      boolean playInBackground,
+      Context context, MediaSource mediaSource)
       throws IOException {
-    this(audioId, parentAudioPlugin, looping, playInBackground);
-    player.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
-    player.prepare();
+    this(audioId, parentAudioPlugin, looping, playInBackground, context, mediaSource);
+    //player.prepare(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+    //player.prepare();
   }
 
   /**
@@ -57,17 +62,17 @@ class LocalManagedMediaPlayer extends ManagedMediaPlayer {
    *
    * @throws IOException if underlying MediaPlayer cannot load the path.
    */
-  public LocalManagedMediaPlayer(
-      String audioId,
-      String path,
-      AudiofileplayerPlugin parentAudioPlugin,
-      boolean looping,
-      boolean playInBackground)
-      throws IOException {
-    this(audioId, parentAudioPlugin, looping, playInBackground);
-    player.setDataSource(path);
-    player.prepare();
-  }
+//  public LocalManagedMediaPlayer(
+//      String audioId,
+//      String path,
+//      AudiofileplayerPlugin parentAudioPlugin,
+//      boolean looping,
+//      boolean playInBackground)
+//      throws IOException {
+//    this(audioId, parentAudioPlugin, looping, playInBackground);
+//    player.setDataSource(path);
+//    player.prepare();
+//  }
 
   /**
    * Create a ManagedMediaPlayer from a byte array.
@@ -79,29 +84,29 @@ class LocalManagedMediaPlayer extends ManagedMediaPlayer {
    * @throws IOException if underlying MediaPlayer cannot load BufferMediaDataSource or
    *     FileDescriptor.
    */
-  public LocalManagedMediaPlayer(
-      String audioId,
-      byte[] audioBytes,
-      AudiofileplayerPlugin parentAudioPlugin,
-      boolean looping,
-      boolean playInBackground,
-      Context context)
-      throws IOException, IllegalArgumentException, IllegalStateException {
-    this(audioId, parentAudioPlugin, looping, playInBackground);
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-      player.setDataSource(new BufferMediaDataSource(audioBytes));
-    } else {
-      // On older SDK versions, write the byte[] to disk, then read as FileDescriptor.
-      File tempAudioFile =
-          File.createTempFile(UUID.randomUUID().toString(), null, context.getCacheDir());
-      tempAudioFile.deleteOnExit();
-      FileOutputStream fos = new FileOutputStream(tempAudioFile);
-      fos.write(audioBytes);
-      fos.close();
-      FileInputStream fis = new FileInputStream(tempAudioFile);
-      player.setDataSource(fis.getFD());
-      fis.close();
-    }
-    player.prepare();
-  }
+//  public LocalManagedMediaPlayer(
+//      String audioId,
+//      byte[] audioBytes,
+//      AudiofileplayerPlugin parentAudioPlugin,
+//      boolean looping,
+//      boolean playInBackground,
+//      Context context)
+//      throws IOException, IllegalArgumentException, IllegalStateException {
+//    this(audioId, parentAudioPlugin, looping, playInBackground);
+////    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+////      player.setDataSource(new BufferMediaDataSource(audioBytes));
+////    } else {
+////      // On older SDK versions, write the byte[] to disk, then read as FileDescriptor.
+////      File tempAudioFile =
+////          File.createTempFile(UUID.randomUUID().toString(), null, context.getCacheDir());
+////      tempAudioFile.deleteOnExit();
+////      FileOutputStream fos = new FileOutputStream(tempAudioFile);
+////      fos.write(audioBytes);
+////      fos.close();
+////      FileInputStream fis = new FileInputStream(tempAudioFile);
+////      player.setDataSource(fis.getFD());
+////      fis.close();
+////    }
+////    player.prepare();
+//  }
 }

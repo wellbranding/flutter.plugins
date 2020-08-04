@@ -13,6 +13,7 @@ import android.graphics.Bitmap;
 import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.renderscript.RenderScript;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
@@ -255,7 +256,9 @@ public class AudiofileplayerService extends MediaBrowserServiceCompat
             : "";
 
     Bitmap bitmap = (metadata != null) ? metadata.getDescription().getIconBitmap() : null;
-
+//    Log.d(
+//            TAG,
+//            "size of compact actions" + compactNotificationActionIndices.length);
     NotificationCompat.Builder builder =
         new NotificationCompat.Builder(AudiofileplayerService.this, CHANNEL_ID);
     builder
@@ -274,6 +277,8 @@ public class AudiofileplayerService extends MediaBrowserServiceCompat
         // Make the transport controls visible on the lockscreen
         .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         // Set the media style to show icons for the Actions.
+            //.setPriority(NotificationCompat.PRIORITY_HIGH)
+            //.setShowWhen(false)
         .setStyle(
             new MediaStyle()
                 .setMediaSession(mediaSession.getSessionToken())

@@ -599,6 +599,10 @@ public class AudiofileplayerPlugin
   @Override
   public void onMediaButtonClick(int keyCode) {
     Log.i(TAG, "onMediaButtonClick()");
+    if(methodChannel==null){
+      return;
+    }
+    //it should not be null
     Map<String, Object> arguments = new HashMap<>();
     arguments.put(MEDIA_EVENT_TYPE, eventCodeToMediaEventString(keyCode));
     methodChannel.invokeMethod(ON_MEDIA_EVENT_CALLBACK, arguments);

@@ -63,7 +63,7 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     AudioSystem.instance.addMediaEventListener(_mediaEventListener);
     // First card.
-    _audio = Audio.load('assets/audio/noise_4_dreams.ogg',
+    _audio = Audio.load('assets/audio/printermanual.m4a',
         looping: true,
         playInBackground: true,
         onComplete: () => setState(() => _audioPlaying = false),
@@ -73,20 +73,20 @@ class _MyAppState extends State<MyApp> {
               _audioPositionSeconds = positionSeconds;
               _seekSliderValue = _audioPositionSeconds / _audioDurationSeconds;
             }));
-//    // Second card.
+    // Second card.
     _loadAudioByteData();
-//    // Third card
-//    _loadRemoteAudio();
-//    // Fourth card.
-//    _backgroundAudio = Audio.load('assets/audio/printermanual.m4a',
-//        onDuration: (double durationSeconds) =>
-//            _backgroundAudioDurationSeconds = durationSeconds,
-//        onPosition: (double positionSeconds) =>
-//            _backgroundAudioPositionSeconds = positionSeconds,
-//        looping: true,
-//        playInBackground: true);
-//    _backgroundAudioPlaying = false;
-//    // Fifth card.
+    // Third card
+    _loadRemoteAudio();
+    // Fourth card.
+    _backgroundAudio = Audio.load('assets/audio/printermanual.m4a',
+        onDuration: (double durationSeconds) =>
+            _backgroundAudioDurationSeconds = durationSeconds,
+        onPosition: (double positionSeconds) =>
+            _backgroundAudioPositionSeconds = positionSeconds,
+        looping: true,
+        playInBackground: true);
+    _backgroundAudioPlaying = false;
+    // Fifth card.
     _loadDocumentPathAudio();
   }
 
@@ -170,7 +170,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _loadAudioByteData() async {
-    _audioByteData = await rootBundle.load('assets/audio/noise_4_dreams.ogg');
+    _audioByteData = await rootBundle.load('assets/audio/sinesweep.mp3');
     setState(() {});
   }
 
@@ -384,75 +384,75 @@ class _MyAppState extends State<MyApp> {
               }),
           const Text('volume (linear amplitude)'),
         ]),
-//        _cardWrapper(<Widget>[
-//          const Text(
-//            'Example 2: one-shot audio playback.\nTap multiple times to spawn overlapping instances.',
-//            textAlign: TextAlign.center,
-//          ),
-//          Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-//            _transportButtonWithTitle('audio from assets', false, () {
-//              Audio.load('assets/audio/sinesweep.mp3',
-//                  onComplete: () => setState(() => --_spawnedAudioCount))
-//                ..play()
-//                ..dispose();
-//              setState(() => ++_spawnedAudioCount);
-//            }),
-//            _transportButtonWithTitle(
-//                'audio from ByteData',
-//                false,
-//                _audioByteData == null
-//                    ? null
-//                    : () {
-//                        Audio.loadFromByteData(_audioByteData,
-//                            onComplete: () =>
-//                                setState(() => --_spawnedAudioCount))
-//                          ..play();
-////                          ..dispose();
-//                        setState(() => ++_spawnedAudioCount);
-//                      })
-//          ]),
-//          Text('Spawned audio count: $_spawnedAudioCount'),
-//        ]),
-//        _cardWrapper(<Widget>[
-//          const Text('Example 3: play remote stream'),
-//          _transportButtonWithTitle(
-//              'resume/pause NPR (KQED) live stream',
-//              _remoteAudioPlaying,
-//              _remoteAudioLoading
-//                  ? null
-//                  : () {
-//                      if (!_remoteAudioPlaying) {
-//                        // If remote audio loading previously failed with an
-//                        // error, attempt to reload.
-//                        if (_remoteAudio == null) _loadRemoteAudio();
-//                        // Note call to resume(), not play(). play() attempts to
-//                        // seek to the start of a file, which, for streams, will
-//                        // fail with an error on Android platforms, so streams
-//                        // should use resume() to begin playback.
-//                        _remoteAudio.resume();
-//                        setState(() => _remoteAudioPlaying = true);
-//                      } else {
-//                        _remoteAudio.pause();
-//                        setState(() => _remoteAudioPlaying = false);
-//                      }
-//                    }),
-//          _remoteErrorMessage != null
-//              ? Text(_remoteErrorMessage,
-//                  style: const TextStyle(color: const Color(0xFFFF0000)))
-//              : Text(_remoteAudioLoading ? 'loading...' : 'loaded')
-//        ]),
-//        _cardWrapper(<Widget>[
-//          const Text(
-//            'Example 4: background playback with notification/lockscreen data.',
-//            textAlign: TextAlign.center,
-//          ),
-//          _transportButtonWithTitle(
-//              _backgroundAudioPlaying ? 'pause' : 'resume',
-//              _backgroundAudioPlaying,
-//              () => _backgroundAudioPlaying
-//                  ? _pauseBackgroundAudio()
-//                  : _resumeBackgroundAudio()),
-//        ]),
+        _cardWrapper(<Widget>[
+          const Text(
+            'Example 2: one-shot audio playback.\nTap multiple times to spawn overlapping instances.',
+            textAlign: TextAlign.center,
+          ),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
+            _transportButtonWithTitle('audio from assets', false, () {
+              Audio.load('assets/audio/sinesweep.mp3',
+                  onComplete: () => setState(() => --_spawnedAudioCount))
+                ..play()
+                ..dispose();
+              setState(() => ++_spawnedAudioCount);
+            }),
+            _transportButtonWithTitle(
+                'audio from ByteData',
+                false,
+                _audioByteData == null
+                    ? null
+                    : () {
+                        Audio.loadFromByteData(_audioByteData,
+                            onComplete: () =>
+                                setState(() => --_spawnedAudioCount))
+                          ..play()
+                          ..dispose();
+                        setState(() => ++_spawnedAudioCount);
+                      })
+          ]),
+          Text('Spawned audio count: $_spawnedAudioCount'),
+        ]),
+        _cardWrapper(<Widget>[
+          const Text('Example 3: play remote stream'),
+          _transportButtonWithTitle(
+              'resume/pause NPR (KQED) live stream',
+              _remoteAudioPlaying,
+              _remoteAudioLoading
+                  ? null
+                  : () {
+                      if (!_remoteAudioPlaying) {
+                        // If remote audio loading previously failed with an
+                        // error, attempt to reload.
+                        if (_remoteAudio == null) _loadRemoteAudio();
+                        // Note call to resume(), not play(). play() attempts to
+                        // seek to the start of a file, which, for streams, will
+                        // fail with an error on Android platforms, so streams
+                        // should use resume() to begin playback.
+                        _remoteAudio.resume();
+                        setState(() => _remoteAudioPlaying = true);
+                      } else {
+                        _remoteAudio.pause();
+                        setState(() => _remoteAudioPlaying = false);
+                      }
+                    }),
+          _remoteErrorMessage != null
+              ? Text(_remoteErrorMessage,
+                  style: const TextStyle(color: const Color(0xFFFF0000)))
+              : Text(_remoteAudioLoading ? 'loading...' : 'loaded')
+        ]),
+        _cardWrapper(<Widget>[
+          const Text(
+            'Example 4: background playback with notification/lockscreen data.',
+            textAlign: TextAlign.center,
+          ),
+          _transportButtonWithTitle(
+              _backgroundAudioPlaying ? 'pause' : 'resume',
+              _backgroundAudioPlaying,
+              () => _backgroundAudioPlaying
+                  ? _pauseBackgroundAudio()
+                  : _resumeBackgroundAudio()),
+        ]),
         _cardWrapper(<Widget>[
           Text(
             'Example 5: load local files from disk.\n\nPut a file named \'foo.mp3\' in the app\'s ${Platform.isAndroid ? 'external files' : 'documents'} folder, then restart the app.',

@@ -1,15 +1,14 @@
 package com.google.flutter.plugins.audiofileplayer;
 
-import android.content.res.AssetFileDescriptor;
+import android.content.Context;
 import android.media.MediaPlayer;
-import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
 
-import androidx.annotation.RequiresApi;
+import com.google.android.exoplayer2.Player;
+import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.source.MediaSource;
 
-import java.io.FileDescriptor;
-import java.io.IOException;
 import java.lang.ref.WeakReference;
 
 /** Base class for wrapping a MediaPlayer for use by AudiofileplayerPlugin. */
@@ -19,9 +18,6 @@ abstract class ManagedMediaPlayer
         MediaPlayer.OnSeekCompleteListener {
   private static final String TAG = ManagedMediaPlayer.class.getSimpleName();
   public static final int PLAY_TO_END = -1;
-  protected FileDescriptor fileDescription;
-  protected long startOffset;
-  protected long getLengh;
 
   interface OnSeekCompleteListener {
     /** Called when asynchronous seeking has completed. */
@@ -31,14 +27,13 @@ abstract class ManagedMediaPlayer
   protected final AudiofileplayerPlugin parentAudioPlugin;
   protected final String audioId;
   protected final boolean playInBackground;
-  protected MediaPlayer player;
-  protected MediaPlayer nextPlayer;
-  AssetFileDescriptor assetFileDescriptor;
+  protected final Context context;
+  protected final SimpleExoPlayer player;
+  protected final MediaSource mediaSource;
   final Handler handler;
   final Runnable pauseAtEndpointRunnable;
-  double volume = 0.5;
   private OnSeekCompleteListener onSeekCompleteListener;
-  String path;
+
 
   /** Runnable which repeatedly sends the player's position. */
   private final Runnable updatePositionData =
@@ -46,9 +41,6 @@ abstract class ManagedMediaPlayer
         @Override
         public void run() {
           try {
-            if(player==null){
-              return;
-            }
             if (player.isPlaying()) {
               double positionSeconds = (double) player.getCurrentPosition() / 1000.0;
               parentAudioPlugin.handlePosition(audioId, positionSeconds);
@@ -64,25 +56,34 @@ abstract class ManagedMediaPlayer
       String audioId,
       AudiofileplayerPlugin parentAudioPlugin,
       boolean looping,
-      boolean playInBackground) {
+      boolean playInBackground, Context context,
+      MediaSource mediaSource) {
     this.parentAudioPlugin = parentAudioPlugin;
     this.audioId = audioId;
     this.playInBackground = playInBackground;
-    player = new MediaPlayer();
-    //not setting looping, because it is custom loop
-    //player.setLooping(looping);
+    this.context = context;
+    this.mediaSource = mediaSource;
+    player =  new SimpleExoPlayer.Builder(context).build();
+      if (looping)
+        player.setRepeatMode(Player.REPEAT_MODE_ALL);
+      else
+        player.setRepeatMode(Player.REPEAT_MODE_OFF);
 
     pauseAtEndpointRunnable = new PauseAtEndpointRunnable(this);
 
+    if(this.mediaSource!=null){
+      Log.d(TAG, "mediasource not null");
+    }
+    else{
+      Log.d(TAG, "mediasource is null");
+    }
     handler = new Handler();
     handler.post(updatePositionData);
   }
 
-
   public void setOnSeekCompleteListener(OnSeekCompleteListener onSeekCompleteListener) {
     this.onSeekCompleteListener = onSeekCompleteListener;
   }
-
 
   public String getAudioId() {
     return audioId;
@@ -104,11 +105,16 @@ abstract class ManagedMediaPlayer
     }
     if (endpointMs == PLAY_TO_END) {
       handler.removeCallbacks(pauseAtEndpointRunnable);
-      player.start();
+      if (player.getPlaybackState() == Player.STATE_ENDED)
+        player.seekTo(0);
+      else if(player.getPlaybackState() == Player.STATE_IDLE)
+        player.prepare(mediaSource);
+      player.setPlayWhenReady(true);
+      //player.start();
     } else {
       // If there is an endpoint, check that it is in the future, then start playback and schedule
       // the pausing after a duration.
-      int positionMs = player.getCurrentPosition();
+      int positionMs = (int) player.getCurrentPosition();
       int durationMs = endpointMs - positionMs;
       Log.i(TAG, "Called play() at " + positionMs + " ms, to play for " + durationMs + " ms.");
       if (durationMs <= 0) {
@@ -116,23 +122,25 @@ abstract class ManagedMediaPlayer
         return;
       }
       handler.removeCallbacks(pauseAtEndpointRunnable);
-      player.start();
+      //player.start();
+      if (player.getPlaybackState() == Player.STATE_ENDED)
+        player.seekTo(0);
+      else if(player.getPlaybackState() == Player.STATE_IDLE)
+        player.prepare(mediaSource);
+      player.setPlayWhenReady(true);
       handler.postDelayed(pauseAtEndpointRunnable, durationMs);
     }
   }
 
   /** Releases the underlying MediaPlayer. */
   public void release() {
-    if(nextPlayer!=null){
-      nextPlayer.stop();
-    }
     player.stop();
-    player.reset();
+    //player.reset();
     player.release();
-    player.setOnErrorListener(null);
-    player.setOnCompletionListener(null);
-    player.setOnPreparedListener(null);
-    player.setOnSeekCompleteListener(null);
+//    player.setOnErrorListener(null);
+//    player.setOnCompletionListener(null);
+//    player.setOnPreparedListener(null);
+//    player.setOnSeekCompleteListener(null);
     handler.removeCallbacksAndMessages(null);
   }
 
@@ -142,53 +150,16 @@ abstract class ManagedMediaPlayer
   }
 
   public void setVolume(double volume) {
-    this.volume = (float) volume;
-    player.setVolume((float) volume, (float) volume);
-    if(nextPlayer!=null){
-      nextPlayer.setVolume((float) volume, (float) volume);
-    }
+    player.setVolume((float) volume);
   }
 
-  public void pause()
-  {
-    player.pause();
+  public void pause() {
+    player.setPlayWhenReady(false);
   }
 
-
-
-  public void createNextMediaPlayer(FileDescriptor file, long startOffset, long lenght) {
-    Log.d(TAG, "trying to create second" + volume);
-    nextPlayer = new MediaPlayer();
-    try {
-      nextPlayer.setDataSource(file, startOffset, lenght);
-      nextPlayer.setVolume((float) volume, (float)volume);
-      nextPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-        @Override
-        public void onPrepared(MediaPlayer mp) {
-          nextPlayer.seekTo(0);
-          player.setNextMediaPlayer(nextPlayer);
-          player.setOnErrorListener(ManagedMediaPlayer.this);
-          player.setOnCompletionListener(ManagedMediaPlayer.this);
-          player.setOnSeekCompleteListener(ManagedMediaPlayer.this);
-        }
-      });
-      nextPlayer.prepareAsync();
-    } catch (IOException e) {
-      Log.d(TAG, "failed to create second mediaplayer" + e.toString());
-      e.printStackTrace();
-    }
-  }
-
-
-
-
-  @RequiresApi(api = Build.VERSION_CODES.M)
   @Override
   public void onCompletion(MediaPlayer mediaPlayer) {
     player.seekTo(0);
-    player = nextPlayer;
-    createNextMediaPlayer(this.fileDescription, this.startOffset, this.getLengh);
-    mediaPlayer.release();
     parentAudioPlugin.handleCompletion(this.audioId);
   }
 
@@ -229,7 +200,7 @@ abstract class ManagedMediaPlayer
         Log.w(TAG, "ManagedMediaPlayer no longer active.");
         return;
       }
-      managedMediaPlayer.player.pause();
+      managedMediaPlayer.player.setPlayWhenReady(false);
       managedMediaPlayer.parentAudioPlugin.handleCompletion(managedMediaPlayer.audioId);
     }
   }

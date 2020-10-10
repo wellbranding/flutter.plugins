@@ -133,10 +133,10 @@ public class AudiofileplayerPlugin
   private Map<String, ManagedMediaPlayer> mediaPlayers;
   private MethodChannel methodChannel;
   private Context context;
+  private FlutterAssets flutterAssets;
 
   private MediaBrowserCompat mediaBrowser;
   private MediaControllerCompat mediaController;
-  FlutterPlugin.FlutterAssets flutterAssets;
 
 //  public static void registerWith(Registrar registrar) {
 //    Log.d(TAG, "register with");
@@ -151,8 +151,9 @@ public class AudiofileplayerPlugin
     activity.getApplication().registerActivityLifecycleCallbacks(callbacks);
   }
 
-  private void initInstance(BinaryMessenger messenger, Context context) {
+  private void initInstance(BinaryMessenger messenger, FlutterPlugin.FlutterAssets flutterAssets, Context context) {
     this.context = context;
+    this.flutterAssets = flutterAssets;
     methodChannel = new MethodChannel(messenger, CHANNEL);
     methodChannel.setMethodCallHandler(this);
     mediaPlayers = new HashMap<>();
@@ -181,8 +182,7 @@ public class AudiofileplayerPlugin
   @Override
   public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
     Log.d(TAG, "on attach engine");
-    flutterAssets = binding.getFlutterAssets();
-    initInstance(binding.getBinaryMessenger(), binding.getApplicationContext());
+    initInstance(binding.getBinaryMessenger(), binding.getFlutterAssets(), binding.getApplicationContext());
   }
 
   @Override
@@ -279,6 +279,7 @@ public class AudiofileplayerPlugin
 
     // All subsequent calls need a valid player.
     ManagedMediaPlayer player = getAndVerifyPlayer(call, result);
+    if (player == null) return;
 
     if (call.method.equals(PLAY_METHOD)) {
       Boolean playFromStartBoolean = call.argument(PLAY_FROM_START);
@@ -352,7 +353,7 @@ public class AudiofileplayerPlugin
       if (call.argument(FLUTTER_PATH) != null) {
         String flutterPath = call.argument(FLUTTER_PATH).toString();
         AssetManager assetManager = context.getAssets();
-        String key = FlutterLoader.getInstance().getLookupKeyForAsset(flutterPath);
+        String key = flutterAssets.getAssetFilePathByName(flutterPath);
         AssetFileDescriptor fd = assetManager.openFd(key);
         if(flutterAssets!=null)
         Log.d(TAG, "flutterassets are not null");
